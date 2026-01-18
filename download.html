@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lunaris AOSP — Downloads</title>
+  <meta name="description" content="Public downloads for Lunaris AOSP custom Android ROM." />
+  
+  <!-- Inter font for improved readability -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind via CDN (no build tools) -->
+  <script>
+    window.tailwind = window.tailwind || {};
+    tailwind.config = {
+      darkMode: 'media',
+      theme: {
+        extend: {
+          colors: {
+            // Accent colors: Electric Blue & Violet
+            accent: {
+              blue: '#7DF9FF',
+              violet: '#8B5CF6'
+            },
+            base: {
+              900: '#0A0C10',
+              800: '#111317',
+              700: '#181B22'
+            }
+          },
+          boxShadow: {
+            glow: '0 0 0 1px rgba(139, 92, 246, 0.5), 0 0 20px rgba(139, 92, 246, 0.4)'
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* Prevent CLS: reserve heights for cards & hero */
+    .card-skeleton { height: 140px; }
+    .hero-min { min-height: 180px; }
+    /* Smooth fade-in */
+    .fade-in { animation: fadeIn 200ms ease-out; }
+    @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+    
+    /* High contrast overrides */
+    body { background: #000000 !important; }
+    .card-bg { background: #1a1a1a !important; }
+    .text-high { color: #ffffff !important; }
+    .text-medium { color: #e5e5e5 !important; }
+    .text-low { color: #b0b0b0 !important; }
+  </style>
+</head>
+<body class="antialiased font-sans min-h-screen" style="background: #000000; color: #ffffff;">
+  <!-- Hero -->
+  <header class="hero-min relative overflow-hidden">
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full blur-3xl opacity-30"
+         style="background: radial-gradient(circle at center, rgba(139,92,246,0.25), transparent 60%)"></div>
+    <div class="absolute -bottom-24 -right-24 w-96 h-96 rounded-full blur-3xl opacity-30"
+         style="background: radial-gradient(circle at center, rgba(125,249,255,0.15), transparent 60%)"></div>
+    <div class="mx-auto max-w-6xl px-4 py-8"> 
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-bold tracking-tight" style="color: #ffffff;">
+            Lunaris AOSP <span class="text-accent-violet" style="color: #a78bfa;">Downloads</span>
+          </h1>
+          <p class="mt-2 text-base md:text-lg" style="color: #e5e5e5;">Custom Android ROM — fast, clean.</p>
+        </div>
+        <span class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-medium" style="border: 2px solid #444; background: #1a1a1a; color: #ffffff;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 6.75a3 3 0 00-3-3h-6a3 3 0 00-3 3v10.5a3 3 0 003 3h6a3 3 0 003-3V6.75zm0 0H18a3 3 0 013 3v10.5a3 3 0 01-3 3h-6"/>
+          </svg>
+          Device: Nothing Phone (3a)
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Controls -->
+  <section class="mx-auto max-w-6xl px-4">
+    <div class="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <!-- Tabs -->
+      <div class="inline-flex rounded-lg p-1" style="border: 2px solid #333; background: #1a1a1a;">
+        <button id="tab-vanilla" class="tab-btn px-4 py-3 text-base font-semibold rounded-md transition-all" data-category="vanilla" style="color: #ffffff;">Vanilla</button>
+        <button id="tab-gapps" class="tab-btn px-4 py-3 text-base font-semibold rounded-md transition-all" data-category="gapps" style="color: #ffffff;">GApps</button>
+      </div>
+      <!-- Search -->
+      <div class="relative w-full md:w-80">
+        <svg class="absolute left-3 top-3.5 h-5 w-5" style="color: #999;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18.5a7.5 7.5 0 006.15-3.85z"/></svg>
+        <input id="search" type="search" placeholder="Search filename..." class="w-full rounded-lg pl-10 pr-4 py-3 text-base focus:outline-none" style="border: 2px solid #333; background: #1a1a1a; color: #ffffff; font-weight: 500;" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Content -->
+  <main class="mx-auto max-w-6xl px-4 py-6">
+    <!-- Loading skeletons to avoid CLS -->
+    <div id="skeleton" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="card-skeleton rounded-lg animate-pulse" style="border: 2px solid #333; background: #1a1a1a;"></div>
+      <div class="card-skeleton rounded-lg animate-pulse" style="border: 2px solid #333; background: #1a1a1a;"></div>
+      <div class="card-skeleton rounded-lg animate-pulse" style="border: 2px solid #333; background: #1a1a1a;"></div>
+      <div class="card-skeleton rounded-lg animate-pulse" style="border: 2px solid #333; background: #1a1a1a;"></div>
+      <div class="card-skeleton rounded-lg animate-pulse" style="border: 2px solid #333; background: #1a1a1a;"></div>
+      <div class="card-skeleton rounded-lg animate-pulse" style="border: 2px solid #333; background: #1a1a1a;"></div>
+    </div>
+
+    <!-- Empty / Error state -->
+    <div id="empty" class="hidden rounded-lg p-8 text-center" style="border: 2px solid #333; background: #1a1a1a;">
+      <div class="mx-auto mb-3 h-14 w-14 rounded-full flex items-center justify-center text-2xl font-bold" style="border: 2px solid #a78bfa; color: #a78bfa;">!</div>
+      <p class="text-lg font-semibold" style="color: #ffffff;">No builds found or the server is unreachable.</p>
+      <p class="mt-2 text-sm" style="color: #b0b0b0;">Ensure uploads exist under <span class="font-medium">/uploads/vanilla</span> or <span class="font-medium">/uploads/gapps</span>.</p>
+      <button class="mt-5 inline-flex items-center rounded-lg px-4 py-2 text-base font-semibold" style="border: 2px solid #444; background: #2a2a2a; color: #ffffff;" onclick="window.location.reload()">Retry</button>
+    </div>
+
+    <!-- Cards -->
+    <div id="cards" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="pointer-events-none fixed bottom-4 left-1/2 -translate-x-1/2 hidden rounded-lg px-5 py-3 text-base font-semibold shadow-lg" style="border: 2px solid #a78bfa; background: #1a1a1a; color: #ffffff;">Copied link to clipboard</div>
+
+  <script>
+    // State
+    let allBuilds = [];
+    let latestByCategory = { vanilla: null, gapps: null };
+    let activeCategory = 'vanilla';
+    let searchTerm = '';
+
+    const $ = (sel) => document.querySelector(sel);
+    const cardsEl = $('#cards');
+    const skeletonEl = $('#skeleton');
+    const emptyEl = $('#empty');
+    const toastEl = $('#toast');
+
+    // Helpers
+    function parseLocalDate(str) { // "YYYY-MM-DD HH:MM"
+      try {
+        const [datePart, timePart] = str.split(' ');
+        const [y, m, d] = datePart.split('-').map(Number);
+        const [hh, mm] = timePart.split(':').map(Number);
+        return new Date(y, (m - 1), d, hh, mm, 0, 0);
+      } catch { return new Date(); }
+    }
+
+    function relativeTime(from) {
+      const diffMs = Date.now() - from.getTime();
+      const sec = Math.max(0, Math.floor(diffMs / 1000));
+      const min = Math.floor(sec / 60);
+      const hr = Math.floor(min / 60);
+      const day = Math.floor(hr / 24);
+      const wk = Math.floor(day / 7);
+      const mo = Math.floor(day / 30);
+      if (sec < 30) return 'just now';
+      if (min < 1) return `${sec}s ago`;
+      if (hr < 1) return `${min}m ago`;
+      if (day < 1) return `${hr}h ago`;
+      if (wk < 2) return `${day}d ago`;
+      if (mo < 12) return `${mo}mo ago`;
+      const years = Math.floor(day / 365);
+      return `${years}y ago`;
+    }
+
+    function formatDisplayDate(dt) {
+      return dt.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function setActiveTab(category) {
+      activeCategory = category;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        const isActive = (btn.dataset.category === category);
+        if (isActive) {
+          btn.style.background = '#a78bfa';
+          btn.style.color = '#000000';
+        } else {
+          btn.style.background = 'transparent';
+          btn.style.color = '#ffffff';
+        }
+      });
+      render();
+    }
+
+    function updateLatestFlags() {
+      const cats = ['vanilla', 'gapps'];
+      cats.forEach(cat => {
+        const builds = allBuilds.filter(b => b.category === cat)
+          .map(b => ({ ...b, dt: parseLocalDate(b.updated_at) }))
+          .sort((a, b) => b.dt - a.dt);
+        latestByCategory[cat] = builds.length ? builds[0].filename : null;
+      });
+    }
+
+    function filteredBuilds() {
+      const term = searchTerm.trim().toLowerCase();
+      return allBuilds.filter(b => (
+        b.category === activeCategory &&
+        (!term || b.filename.toLowerCase().includes(term))
+      ));
+    }
+
+    function buildCard(item) {
+      const dt = parseLocalDate(item.updated_at);
+      const isLatest = latestByCategory[item.category] === item.filename;
+      const borderStyle = isLatest ? 'border: 3px solid #a78bfa; box-shadow: 0 0 20px rgba(167, 139, 250, 0.5);' : 'border: 2px solid #333;';
+      const latestBadge = isLatest ? `<span class="absolute -top-3 -left-3 rounded-lg px-3 py-1 text-sm font-bold" style="background: #a78bfa; color: #000;">LATEST</span>` : '';
+      const href = `/downloads/${item.category}/${encodeURIComponent(item.filename)}`;
+      return `
+        <div class="relative rounded-lg p-5" style="${borderStyle} background: #1a1a1a;">
+          ${latestBadge}
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="text-base font-bold truncate" style="color: #ffffff;">${item.filename}</h3>
+              <div class="mt-2 flex flex-wrap items-center gap-2 text-sm" style="color: #e5e5e5;">
+                <span class="inline-flex items-center gap-1 rounded-md px-2 py-1 font-semibold" style="border: 1px solid #555; background: #2a2a2a; color: #ffffff;">${item.category === 'gapps' ? 'GApps' : 'Vanilla'}</span>
+                <span class="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium" style="border: 1px solid #555; background: #2a2a2a; color: #e5e5e5;">${formatDisplayDate(dt)}</span>
+                <span style="color: #b0b0b0;">• Uploaded ${relativeTime(dt)}</span>
+              </div>
+            </div>
+            <div class="text-base font-bold whitespace-nowrap" style="color: #ffffff;">${item.size}</div>
+          </div>
+          <div class="mt-5 flex items-center gap-3">
+            <a href="${href}" class="inline-flex items-center justify-center rounded-lg px-5 py-3 text-base font-bold transition-opacity hover:opacity-90" style="background: #a78bfa; color: #000;" download>Download</a>
+            <button class="inline-flex items-center justify-center rounded-lg px-4 py-3 text-base font-semibold" style="border: 2px solid #444; background: #2a2a2a; color: #ffffff;" aria-label="Copy link" data-href="${href}" onclick="copyLink(this)">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2zm3-4h6a2 2 0 012 2v6M5 11V7a2 2 0 012-2h4"/></svg>
+              <span class="ml-2">Copy Link</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function render() {
+      const items = filteredBuilds();
+      skeletonEl.classList.add('hidden');
+      if (!items.length) {
+        cardsEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+      emptyEl.classList.add('hidden');
+      cardsEl.innerHTML = items.map(buildCard).join('');
+      cardsEl.classList.remove('hidden');
+      cardsEl.classList.add('fade-in');
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/list', { headers: { 'Accept': 'application/json' }});
+        if (!res.ok) throw new Error('Bad response');
+        const data = await res.json();
+        // Expecting: [{ category, filename, size, updated_at }]
+        allBuilds = Array.isArray(data) ? data : [];
+        updateLatestFlags();
+        render();
+      } catch (err) {
+        console.error('Failed to load /list:', err);
+        skeletonEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+      }
+    }
+
+    function copyLink(btn) {
+      const href = btn?.dataset?.href || '';
+      if (!href) return;
+      const abs = new URL(href, window.location.origin).toString();
+      navigator.clipboard.writeText(abs).then(() => {
+        toastEl.textContent = 'Copied link to clipboard';
+        toastEl.classList.remove('hidden');
+        setTimeout(() => toastEl.classList.add('hidden'), 1500);
+      }).catch(() => {
+        toastEl.textContent = 'Copy failed';
+        toastEl.classList.remove('hidden');
+        setTimeout(() => toastEl.classList.add('hidden'), 1500);
+      });
+    }
+
+    // Events
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => setActiveTab(btn.dataset.category));
+    });
+    $('#search').addEventListener('input', (e) => {
+      searchTerm = e.target.value || '';
+      render();
+    });
+
+    // Init
+    setActiveTab('vanilla');
+    load();
+  </script>
+</body>
+</html>

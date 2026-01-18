@@ -1,0 +1,41 @@
+# Binaries
+rom-server
+rom-server.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Uploads directory (ROM files)
+uploads/vanilla/*.zip
+uploads/gapps/*.zip
+uploads/temp/*
+
+# Keep directory structure
+!uploads/vanilla/.gitkeep
+!uploads/gapps/.gitkeep
+!uploads/temp/.gitkeep
+
+# Go build artifacts
+*.test
+*.out
+*.prof
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# OS-specific
+Thumbs.db
+desktop.ini

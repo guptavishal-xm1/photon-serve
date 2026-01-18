@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AOSP Build Dashboard</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        h1 { margin-top: 0; font-size: 24px; text-align: center; color: var(--text); }
+        .subtitle { text-align: center; color: #64748b; margin-bottom: 30px; font-size: 14px; }
+
+        /* Form Elements */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Upload Button */
+        .btn-upload {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-upload:hover { background: #1d4ed8; }
+        .btn-upload:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 20px;
+            background: #e2e8f0;
+            border-radius: 99px;
+            height: 10px;
+            overflow: hidden;
+            display: none; /* Hidden by default */
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--success);
+            width: 0%;
+            transition: width 0.2s linear;
+        }
+        .status-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            min-height: 20px;
+        }
+
+        /* File List */
+        .file-list { margin-top: 40px; border-top: 2px solid var(--bg); padding-top: 20px; }
+        .file-card {
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-info { display: flex; flex-direction: column; }
+        .file-tag {
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        .file-name { font-weight: 600; color: var(--primary); text-decoration: none; }
+        .file-meta { font-size: 12px; color: #64748b; margin-top: 4px; }
+        
+        /* Icons */
+        .icon-download { font-size: 20px; text-decoration: none; }
+
+        /* Toast Notification */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h1>ROM Center</h1>
+    <p class="subtitle">Secure AOSP Build Upload & Distribution</p>
+
+    <div class="form-group">
+        <label>Admin Key</label>
+        <input type="password" id="apiKey" placeholder="Enter your Secret Key" onchange="saveKey()">
+    </div>
+
+    <div class="form-group">
+        <label>Select Category</label>
+        <select id="category">
+            <option value="vanilla">Vanilla (Pure)</option>
+            <option value="gapps">GApps (Google)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>ROM File (.zip)</label>
+        <input type="file" id="fileInput" accept=".zip">
+    </div>
+
+    <button class="btn-upload" id="uploadBtn" onclick="startUpload()">Upload Build</button>
+
+    <div class="progress-container" id="pContainer">
+        <div class="progress-bar" id="pBar"></div>
+    </div>
+    <div class="status-text" id="statusText"></div>
+
+    <div class="file-list">
+        <h3 style="font-size: 16px; margin-bottom: 15px;">Current Builds</h3>
+        <div id="fileListContainer">
+            <p style="text-align:center; color:#999; font-size:14px;">Loading builds...</p>
+        </div>
+    </div>
+</div>
+
+<div id="toast">Message</div>
+
+<script>
+    const API_KEY_STORAGE = "rom_dashboard_key";
+
+    // 1. Initialize
+    window.onload = () => {
+        // Restore API Key from storage
+        const savedKey = localStorage.getItem(API_KEY_STORAGE);
+        if (savedKey) document.getElementById("apiKey").value = savedKey;
+        
+        // Load current files
+        fetchFiles();
+    };
+
+    function saveKey() {
+        const key = document.getElementById("apiKey").value;
+        localStorage.setItem(API_KEY_STORAGE, key);
+    }
+
+    // 2. Main Upload Logic
+    function startUpload() {
+        const key = document.getElementById("apiKey").value;
+        const fileInput = document.getElementById("fileInput");
+        const category = document.getElementById("category").value;
+        const file = fileInput.files[0];
+
+        // Validations
+        if (!key) return showToast("Missing API Key");
+        if (!file) return showToast("No file selected");
+        if (!file.name.toLowerCase().endsWith(".zip")) return showToast("Only .zip files allowed");
+
+        // UI Reset
+        const btn = document.getElementById("uploadBtn");
+        const pContainer = document.getElementById("pContainer");
+        const pBar = document.getElementById("pBar");
+        const statusText = document.getElementById("statusText");
+
+        btn.disabled = true;
+        pContainer.style.display = "block";
+        pBar.style.width = "0%";
+        statusText.innerText = "Starting upload...";
+
+        // Prepare Data
+        const formData = new FormData();
+        formData.append("zipfile", file);
+        formData.append("category", category);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/upload", true);
+        
+        // Add Headers
+        xhr.setRequestHeader("X-API-Key", key);
+
+        // Progress Handler
+        xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+                const percent = (e.loaded / e.total) * 100;
+                const mbLoaded = (e.loaded / 1024 / 1024).toFixed(1);
+                const mbTotal = (e.total / 1024 / 1024).toFixed(1);
+                
+                pBar.style.width = percent + "%";
+                statusText.innerText = `${Math.round(percent)}% (${mbLoaded}MB / ${mbTotal}MB)`;
+            }
+        });
+
+        // Completion Handler
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === 4) {
+                btn.disabled = false;
+                if (xhr.status === 200) {
+                    showToast("Upload Successful!");
+                    statusText.innerText = "Upload Complete";
+                    fileInput.value = ""; // Clear input
+                    fetchFiles(); // Refresh list
+                } else {
+                    showToast("Error: " + xhr.responseText);
+                    statusText.innerText = "Upload Failed";
+                    pBar.style.background = "var(--danger)";
+                }
+            }
+        };
+
+        xhr.send(formData);
+    }
+
+    // 3. Fetch & Display Files
+    async function fetchFiles() {
+        try {
+            const res = await fetch('/list');
+            const files = await res.json();
+            const container = document.getElementById("fileListContainer");
+
+            if (!files || files.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#999; font-size:14px;">No files uploaded yet.</p>';
+                return;
+            }
+
+            let html = "";
+            files.forEach(f => {
+                const link = `/downloads/${f.category}/${f.filename}`;
+                // Color code badges based on category
+                const badgeColor = f.category === 'vanilla' ? '#eab308' : '#16a34a'; 
+                
+                html += `
+                    <div class="file-card">
+                        <div class="file-info">
+                            <span class="file-tag" style="color:${badgeColor}">${f.category.toUpperCase()}</span>
+                            <a href="${link}" class="file-name" target="_blank">${f.filename}</a>
+                            <span class="file-meta">Size: ${f.size} • Updated: ${f.updated_at}</span>
+                        </div>
+                        <a href="${link}" class="btn-download" title="Download">↓</a>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } catch (e) {
+            console.error("Fetch error:", e);
+        }
+    }
+
+    // 4. Utility: Toast Notification
+    function showToast(message) {
+        const x = document.getElementById("toast");
+        x.innerText = message;
+        x.className = "show";
+        setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+    }
+</script>
+
+</body>
+</html>
