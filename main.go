@@ -141,7 +141,8 @@ func handleUpload(baseDir string, logger *log.Logger) http.HandlerFunc {
 
 		// B. Body Size Limit (Hard Stop for too large files)
 		r.Body = http.MaxBytesReader(w, r.Body, MaxUploadSize)
-		if err := r.ParseMultipartForm(MaxUploadSize); err != nil {
+		// Use 32MB memory buffer, larger files spill to disk (prevents memory exhaustion)
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
 			logger.Printf("Upload blocked: File too large or parse error: %v", err)
 			http.Error(w, "File too large (Max 5GB)", http.StatusRequestEntityTooLarge)
 			return
@@ -196,26 +197,41 @@ func handleUpload(baseDir string, logger *log.Logger) http.HandlerFunc {
 			return
 		}
 		tempName := tempFile.Name()
+		// Ensure file handle is closed to prevent descriptor leak
+		defer tempFile.Close()
 		// Ensure temp file is deleted if function exits early or crashes
 		defer os.Remove(tempName)
 
 		// 2. Stream data to temp file
 		if _, err := io.Copy(tempFile, file); err != nil {
-			tempFile.Close()
 			logger.Printf("Write error: %v", err)
 			http.Error(w, "Upload interrupted", http.StatusInternalServerError)
 			return
 		}
-		tempFile.Close()
+		// Close temp file before moving (defer will close again safely)
+		if err := tempFile.Close(); err != nil {
+			logger.Printf("Failed to close temp file: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 
 		// 3. "The Swap" (Critical Zone)
 		finalDir := filepath.Join(baseDir, category)
 		finalPath := filepath.Join(finalDir, safeFilename)
 
 		// Clean the target directory (Enforce 1 file rule)
-		// We remove the whole directory and recreate it to ensure it's empty
-		os.RemoveAll(finalDir)
-		os.MkdirAll(finalDir, DirPerms)
+		// First ensure directory exists, then clean old files
+		if err := os.MkdirAll(finalDir, DirPerms); err != nil {
+			logger.Printf("Failed to create target directory: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		// Remove all existing files in the directory
+		if entries, err := os.ReadDir(finalDir); err == nil {
+			for _, entry := range entries {
+				os.Remove(filepath.Join(finalDir, entry.Name()))
+			}
+		}
 
 		// Move temp file to final destination
 		if err := os.Rename(tempName, finalPath); err != nil {
@@ -308,13 +324,20 @@ func manualMove(source, dest string) error {
 
 	outputFile, err := os.Create(dest)
 	if err != nil { return err }
-	defer outputFile.Close()
 
 	if _, err := io.Copy(outputFile, inputFile); err != nil {
+		outputFile.Close()
 		return err
 	}
 	
-	// Close explicitly before removing source
-	inputFile.Close()
+	// Explicitly close and sync output file before removing source
+	if err := outputFile.Sync(); err != nil {
+		outputFile.Close()
+		return err
+	}
+	if err := outputFile.Close(); err != nil {
+		return err
+	}
+	
 	return os.Remove(source)
 }
