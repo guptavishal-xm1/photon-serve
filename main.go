@@ -252,7 +252,7 @@ func handleUpload(baseDir string, logger *log.Logger) http.HandlerFunc {
 
 func handleList(baseDir string, logger *log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var files []FileInfo
+		files := []FileInfo{}
 		categories := []string{"vanilla", "gapps"}
 
 		for _, cat := range categories {
@@ -260,12 +260,23 @@ func handleList(baseDir string, logger *log.Logger) http.HandlerFunc {
 			entries, _ := os.ReadDir(dir)
 			for _, e := range entries {
 				if !e.IsDir() && strings.HasSuffix(e.Name(), ".zip") {
-					info, _ := e.Info()
-					sizeMB := info.Size() / 1024 / 1024
+					info, err := e.Info()
+					if err != nil {
+						continue
+					}
+					
+					sizeBytes := info.Size()
+					var sizeStr string
+					if sizeBytes > 1024*1024*1024 {
+						sizeStr = fmt.Sprintf("%.2f GB", float64(sizeBytes)/1024/1024/1024)
+					} else {
+						sizeStr = fmt.Sprintf("%d MB", sizeBytes/1024/1024)
+					}
+
 					files = append(files, FileInfo{
 						Category:  cat,
 						Filename:  e.Name(),
-						Size:      fmt.Sprintf("%d MB", sizeMB),
+						Size:      sizeStr,
 						UpdatedAt: info.ModTime().Format("2006-01-02 15:04"),
 					})
 				}
