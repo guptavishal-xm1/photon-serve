@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ROM Manager // Admin</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <title id="page-title">ROM Manager // Admin</title>
     <style>
         :root {
             --primary: #3b82f6;
             --primary-hover: #2563eb;
             --danger: #ef4444;
             --danger-hover: #dc2626;
+            --success: #10b981;
             --bg: #f8fafc;
             --card-bg: #ffffff;
             --text-main: #1e293b;
@@ -41,7 +43,6 @@
             margin: 0 auto;
         }
 
-        /* --- Components --- */
         .card {
             background: var(--card-bg);
             border: 1px solid var(--border);
@@ -88,7 +89,8 @@
         .btn-danger { background: var(--danger); }
         .btn-danger:hover { background: var(--danger-hover); }
 
-        /* --- Upload Section --- */
+        .btn-sm { padding: 6px 12px; font-size: 0.85em; }
+
         .upload-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -105,9 +107,8 @@
         }
         #drop-zone.dragover { border-color: var(--primary); background: rgba(59, 130, 246, 0.05); }
 
-        /* --- Progress Bar --- */
         #progress-container {
-            display: none; /* Hidden by default */
+            display: none;
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid var(--border);
@@ -146,7 +147,6 @@
         }
         .stat-item strong { display: block; color: var(--text-main); font-size: 1.1em; }
 
-        /* --- File List --- */
         .file-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -176,10 +176,25 @@
         .file-card .tag.vanilla { background: #dbeafe; color: #1e40af; }
         .file-card .tag.gapps { background: #dcfce7; color: #166534; }
 
-        .file-name { font-weight: 600; margin-bottom: 5px; word-break: break-all; padding-right: 50px; }
-        .file-meta { font-size: 0.85em; color: var(--text-muted); }
+        .file-name { font-weight: 600; margin-bottom: 5px; word-break: break-all; padding-right: 60px; }
+        .file-meta { font-size: 0.85em; color: var(--text-muted); margin-bottom: 10px; }
+        .file-actions { display: flex; gap: 8px; }
 
-        /* --- Toast --- */
+        .category-info {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .category-badge {
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            font-size: 0.9em;
+        }
+        .category-badge strong { color: var(--primary); }
+
         #toast-container {
             position: fixed;
             bottom: 20px;
@@ -208,9 +223,9 @@
 
 <div class="container">
     <div class="header">
-        <h1>ROM Manager</h1>
+        <h1 id="admin-title">ROM Manager</h1>
         <div style="text-align: right;">
-            <small style="color: var(--text-muted)">Server Status: Online</small>
+            <small style="color: var(--text-muted)">Server Status: <span id="server-status">Checking...</span></small>
         </div>
     </div>
 
@@ -219,6 +234,14 @@
         <h3>🔑 Authentication</h3>
         <input type="password" id="api-key" placeholder="Enter Admin API Key" autocomplete="current-password">
         <small class="text-muted">Saved locally for convenience.</small>
+    </div>
+
+    <!-- Category Info -->
+    <div class="card">
+        <h3>📊 Category Limits</h3>
+        <div id="category-info" class="category-info">
+            <p style="color: var(--text-muted)">Loading configuration...</p>
+        </div>
     </div>
 
     <!-- Upload Card -->
@@ -230,8 +253,7 @@
                 <div>
                     <label style="display:block; margin-bottom:5px; font-weight:600">Category</label>
                     <select id="category-select">
-                        <option value="vanilla">Vanilla (Pure)</option>
-                        <option value="gapps">GApps Included</option>
+                        <!-- Dynamically populated -->
                     </select>
                 </div>
             </div>
@@ -285,7 +307,9 @@
 <div id="toast-container"></div>
 
 <script>
-    // --- State & Elements ---
+    // State
+    let appConfig = null;
+    
     const els = {
         apiKey: document.getElementById('api-key'),
         form: document.getElementById('upload-form'),
@@ -297,7 +321,9 @@
         progressBar: document.getElementById('progress-bar'),
         cancelBtn: document.getElementById('cancel-btn'),
         fileList: document.getElementById('file-list'),
-        // Stats
+        categorySelect: document.getElementById('category-select'),
+        categoryInfo: document.getElementById('category-info'),
+        serverStatus: document.getElementById('server-status'),
         status: document.getElementById('status-text'),
         percent: document.getElementById('percent-text'),
         speed: document.getElementById('speed-text'),
@@ -309,16 +335,22 @@
     let lastUploadTime = 0;
     let lastLoaded = 0;
 
-    // --- Initialization ---
-    document.addEventListener('DOMContentLoaded', () => {
-        // Load API Key
+    // Initialization
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Load API Key from localStorage
         const savedKey = localStorage.getItem('rom_api_key');
         if (savedKey) els.apiKey.value = savedKey;
 
-        // Fetch List
+        // Load configuration first
+        await loadConfig();
+        
+        // Then fetch files
         fetchFiles();
+        
+        // Check server health
+        checkHealth();
 
-        // Drag & Drop
+        // Drag & Drop setup
         els.dropZone.addEventListener('click', () => els.fileInput.click());
         els.dropZone.addEventListener('dragover', (e) => { e.preventDefault(); els.dropZone.classList.add('dragover'); });
         els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('dragover'));
@@ -335,18 +367,61 @@
         els.apiKey.addEventListener('input', (e) => localStorage.setItem('rom_api_key', e.target.value));
     });
 
+    async function loadConfig() {
+        try {
+            const res = await fetch('/api/config');
+            if (!res.ok) throw new Error('Failed to load config');
+            appConfig = await res.json();
+
+            // Update title
+            document.title = appConfig.app_name + ' // Admin';
+            document.getElementById('admin-title').textContent = appConfig.app_name + ' Manager';
+
+            // Populate category select
+            els.categorySelect.innerHTML = appConfig.categories.map(cat => 
+                `<option value="${cat.name}">${cat.display_name}</option>`
+            ).join('');
+
+            // Show category info
+            els.categoryInfo.innerHTML = appConfig.categories.map(cat => `
+                <div class="category-badge">
+                    <strong>${cat.display_name}</strong>: ${cat.file_count}/${cat.max_files} files
+                </div>
+            `).join('');
+
+        } catch (err) {
+            console.error('Failed to load config:', err);
+            showToast('Failed to load configuration', 'error');
+        }
+    }
+
+    async function checkHealth() {
+        try {
+            const res = await fetch('/health');
+            if (res.ok) {
+                els.serverStatus.textContent = 'Online';
+                els.serverStatus.style.color = 'var(--success)';
+            } else {
+                throw new Error('Not OK');
+            }
+        } catch {
+            els.serverStatus.textContent = 'Offline';
+            els.serverStatus.style.color = 'var(--danger)';
+        }
+    }
+
     function handleFileSelect(file) {
-        els.fileInput.files = createFileList(file); // Hack to set input files
+        els.fileInput.files = createFileList(file);
         els.fileName.textContent = `Selected: ${file.name} (${formatSize(file.size)})`;
     }
 
-    // --- Upload Logic ---
+    // Upload Logic
     els.form.addEventListener('submit', (e) => {
         e.preventDefault();
         
         const file = els.fileInput.files[0];
         const key = els.apiKey.value.trim();
-        const category = document.getElementById('category-select').value;
+        const category = els.categorySelect.value;
 
         if (!file) return showToast('Please select a file', 'error');
         if (!key) return showToast('API Key is required', 'error');
@@ -355,28 +430,23 @@
     });
 
     function startUpload(file, category, key) {
-        // UI Reset
         els.uploadBtn.disabled = true;
         els.progressContainer.style.display = 'block';
         els.fileName.style.display = 'none';
         resetStats();
         
-        // Prepare Data
         const formData = new FormData();
         formData.append('zipfile', file);
         formData.append('category', category);
 
-        // Create XHR
         currentXhr = new XMLHttpRequest();
         currentXhr.open('POST', '/upload', true);
         currentXhr.setRequestHeader('X-API-Key', key);
 
-        // Stats tracking vars
         const startTime = Date.now();
         lastUploadTime = startTime;
         lastLoaded = 0;
 
-        // Progress Handler
         currentXhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
                 const now = Date.now();
@@ -384,39 +454,41 @@
                 const loaded = e.loaded;
                 const percent = ((loaded / total) * 100).toFixed(1);
 
-                // Update Progress Bar (Silky smooth via CSS)
                 els.progressBar.style.width = percent + '%';
                 els.percent.textContent = percent + '%';
                 els.uploaded.textContent = `${formatSize(loaded)} / ${formatSize(total)}`;
 
-                // Update Stats (Throttled to 500ms for readability)
                 if (now - lastUploadTime >= 500) {
-                    const timeDiff = (now - lastUploadTime) / 1000; // seconds
+                    const timeDiff = (now - lastUploadTime) / 1000;
                     const bytesDiff = loaded - lastLoaded;
                     const speedBytesPerSec = bytesDiff / timeDiff;
 
-                    // Calculate ETA
                     const remainingBytes = total - loaded;
                     const secondsRemaining = speedBytesPerSec > 0 ? remainingBytes / speedBytesPerSec : 0;
 
                     els.speed.textContent = `${formatSpeed(speedBytesPerSec)}`;
                     els.eta.textContent = formatTime(secondsRemaining);
 
-                    // Reset tracking
                     lastUploadTime = now;
                     lastLoaded = loaded;
                 }
             }
         };
 
-        // Completion Handlers
         currentXhr.onload = () => {
             if (currentXhr.status === 200) {
-                showToast('Upload Successful!', 'success');
+                const successMsg = appConfig?.text?.upload_success || 'Upload Successful!';
+                showToast(successMsg, 'success');
                 uploadCleanup();
-                fetchFiles(); // Refresh list
+                loadConfig(); // Refresh category counts
+                fetchFiles();
             } else {
-                showToast(`Error: ${currentXhr.responseText || 'Upload failed'}`, 'error');
+                let errorMsg = appConfig?.text?.upload_failed || 'Upload failed';
+                try {
+                    const resp = JSON.parse(currentXhr.responseText);
+                    errorMsg = resp.error || errorMsg;
+                } catch {}
+                showToast(`Error: ${errorMsg}`, 'error');
                 uploadCleanup();
             }
         };
@@ -445,29 +517,35 @@
         els.uploadBtn.disabled = false;
         els.progressContainer.style.display = 'none';
         els.fileName.style.display = 'block';
-        els.fileInput.value = ''; // Clear file
+        els.fileInput.value = '';
         els.fileName.textContent = '';
         currentXhr = null;
     }
 
-    // --- List Logic ---
+    // List Logic
     function fetchFiles() {
         fetch('/list')
             .then(res => res.json())
             .then(data => {
+                const files = data.files || data || [];
                 els.fileList.innerHTML = '';
-                if (data.length === 0) {
-                    els.fileList.innerHTML = '<p style="color:var(--text-muted)">No files found on server.</p>';
+                if (files.length === 0) {
+                    const msg = appConfig?.text?.no_files_found || 'No files found on server.';
+                    els.fileList.innerHTML = `<p style="color:var(--text-muted)">${msg}</p>`;
                     return;
                 }
-                data.forEach(file => {
+                files.forEach(file => {
                     const card = document.createElement('div');
                     card.className = 'file-card';
+                    const displayName = getCategoryDisplayName(file.category);
                     card.innerHTML = `
-                        <span class="tag ${file.category}">${file.category}</span>
+                        <span class="tag ${file.category}">${displayName}</span>
                         <div class="file-name">${file.filename}</div>
                         <div class="file-meta">
                             Size: ${file.size} • Uploaded: ${file.updated_at}
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn btn-danger btn-sm" onclick="deleteFile('${file.category}', '${file.filename}')">Delete</button>
                         </div>
                     `;
                     els.fileList.appendChild(card);
@@ -479,7 +557,40 @@
             });
     }
 
-    // --- Utilities ---
+    function getCategoryDisplayName(catName) {
+        if (!appConfig) return catName;
+        const cat = appConfig.categories.find(c => c.name === catName);
+        return cat ? cat.display_name : catName;
+    }
+
+    // Delete file
+    window.deleteFile = function(category, filename) {
+        const key = els.apiKey.value.trim();
+        if (!key) return showToast('API Key is required', 'error');
+        
+        if (!confirm(`Delete ${filename}?`)) return;
+
+        fetch(`/delete?category=${encodeURIComponent(category)}&filename=${encodeURIComponent(filename)}`, {
+            method: 'DELETE',
+            headers: { 'X-API-Key': key }
+        })
+        .then(res => {
+            if (res.ok) {
+                showToast('File deleted', 'success');
+                loadConfig(); // Refresh counts
+                fetchFiles();
+            } else {
+                return res.json().then(data => {
+                    throw new Error(data.error || 'Delete failed');
+                });
+            }
+        })
+        .catch(err => {
+            showToast(err.message, 'error');
+        });
+    };
+
+    // Utilities
     function formatSize(bytes) {
         if (bytes === 0) return '0 B';
         const k = 1024;
@@ -517,7 +628,6 @@
         }, 4000);
     }
 
-    // Helper to programmatically set file input
     function createFileList(file) {
         const dt = new DataTransfer();
         dt.items.add(file);

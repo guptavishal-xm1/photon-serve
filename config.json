@@ -1,0 +1,66 @@
+{
+  "server": {
+    "port": "8080",
+    "read_timeout_minutes": 60,
+    "write_timeout_minutes": 60,
+    "idle_timeout_seconds": 120,
+    "shutdown_timeout_seconds": 30
+  },
+  "storage": {
+    "upload_dir": "uploads",
+    "temp_dir": "temp",
+    "max_upload_size_gb": 5,
+    "dir_permissions": "0755"
+  },
+  "categories": {
+    "vanilla": {
+      "enabled": true,
+      "max_files": 3,
+      "display_name": "Vanilla (Pure)",
+      "description": "Pure AOSP without Google services"
+    },
+    "gapps": {
+      "enabled": true,
+      "max_files": 3,
+      "display_name": "GApps Included",
+      "description": "AOSP with Google Play services"
+    }
+  },
+  "security": {
+    "api_key_env": "API_KEY",
+    "default_api_key": "changeme",
+    "rate_limit": {
+      "enabled": true,
+      "requests_per_minute": 60,
+      "burst_size": 10
+    }
+  },
+  "concurrency": {
+    "max_concurrent_downloads": 100,
+    "max_concurrent_uploads": 20,
+    "download_buffer_size_kb": 64,
+    "worker_pool_size": 50
+  },
+  "text": {
+    "app_name": "Lunaris AOSP",
+    "app_title": "Lunaris AOSP — Downloads",
+    "app_subtitle": " .",
+    "device_name": "Nothing Phone (3a)",
+    "admin_title": "ROM Manager // Admin",
+    "upload_success": "Upload successful",
+    "upload_failed": "Upload failed",
+    "file_too_large": "File too large",
+    "invalid_file": "Invalid file format",
+    "unauthorized": "Unauthorized access",
+    "no_files_found": "No builds found",
+    "copy_success": "Copied link to clipboard",
+    "copy_failed": "Copy failed",
+    "server_error": "Internal Server Error"
+  },
+  "allowed_extensions": [".zip"],
+  "logging": {
+    "level": "info",
+    "format": "[ROM-SERVER] ",
+    "enable_request_logging": true
+  }
+}
