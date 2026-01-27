@@ -440,7 +440,8 @@
         formData.append('category', category);
 
         currentXhr = new XMLHttpRequest();
-        currentXhr.open('POST', '/upload', true);
+        // Send category in query param so server can validate it before reading body
+        currentXhr.open('POST', `/upload?category=${encodeURIComponent(category)}`, true);
         currentXhr.setRequestHeader('X-API-Key', key);
 
         const startTime = Date.now();
@@ -527,7 +528,14 @@
         fetch('/list')
             .then(res => res.json())
             .then(data => {
-                const files = data.files || data || [];
+                // Handle { files: [...] } or [...] or null
+                let files = [];
+                if (data && Array.isArray(data.files)) {
+                    files = data.files;
+                } else if (Array.isArray(data)) {
+                    files = data;
+                }
+                
                 els.fileList.innerHTML = '';
                 if (files.length === 0) {
                     const msg = appConfig?.text?.no_files_found || 'No files found on server.';

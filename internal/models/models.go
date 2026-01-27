@@ -9,6 +9,7 @@ type FileInfo struct {
 	Size      string `json:"size"`
 	SizeBytes int64  `json:"size_bytes"`
 	UpdatedAt string `json:"updated_at"`
+	Downloads int64  `json:"downloads"`
 }
 
 // UploadRequest represents an upload request

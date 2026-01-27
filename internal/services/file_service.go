@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -19,15 +20,59 @@ type FileService struct {
 	uploadSem      chan struct{} // Semaphore for upload concurrency
 	downloadSem    chan struct{} // Semaphore for download concurrency
 	mu             sync.RWMutex  // Mutex for file operations
+	downloadCounts map[string]int64
+	statsPath      string
 }
 
 // NewFileService creates a new FileService with concurrency limits
 func NewFileService(cfg *config.Config) *FileService {
-	return &FileService{
-		cfg:         cfg,
-		uploadSem:   make(chan struct{}, cfg.Concurrency.MaxConcurrentUploads),
-		downloadSem: make(chan struct{}, cfg.Concurrency.MaxConcurrentDownloads),
+	fs := &FileService{
+		cfg:            cfg,
+		uploadSem:      make(chan struct{}, cfg.Concurrency.MaxConcurrentUploads),
+		downloadSem:    make(chan struct{}, cfg.Concurrency.MaxConcurrentDownloads),
+		downloadCounts: make(map[string]int64),
+		statsPath:      filepath.Join(cfg.Storage.UploadDir, "stats.json"),
 	}
+	// Try to load existing stats (ignore error on first run)
+	_ = fs.loadStats()
+	return fs
+}
+
+// loadStats loads download counts from JSON file
+func (s *FileService) loadStats() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	data, err := os.ReadFile(s.statsPath)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, &s.downloadCounts)
+}
+
+// saveStats saves download counts to JSON file
+func (s *FileService) saveStats() error {
+	s.mu.RLock()
+	data, err := json.MarshalIndent(s.downloadCounts, "", "  ")
+	s.mu.RUnlock()
+	
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(s.statsPath, data, 0644)
+}
+
+// IncrementDownloadCount increments the count for a file
+func (s *FileService) IncrementDownloadCount(category, filename string) {
+	key := filepath.Join(category, filename)
+	
+	s.mu.Lock()
+	s.downloadCounts[key]++
+	s.mu.Unlock()
+
+	// Persist asynchronously to avoid blocking download
+	// In a real high-scale app, we'd batch this. For this usage, it's fine.
+	go s.saveStats()
 }
 
 // AcquireUploadSlot blocks until an upload slot is available
@@ -78,7 +123,7 @@ func (s *FileService) ListFiles() ([]models.FileInfo, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var files []models.FileInfo
+	files := []models.FileInfo{} // Initialize as empty slice (not nil) for JSON []
 	baseDir := s.cfg.Storage.UploadDir
 
 	for catName, cat := range s.cfg.Categories {
@@ -114,6 +159,7 @@ func (s *FileService) ListFiles() ([]models.FileInfo, error) {
 				Size:      formatSize(info.Size()),
 				SizeBytes: info.Size(),
 				UpdatedAt: info.ModTime().Format("2006-01-02 15:04"),
+				Downloads: s.downloadCounts[filepath.Join(catName, e.Name())],
 			})
 		}
 	}
@@ -145,8 +191,8 @@ func (s *FileService) ListFilesByCategory(category string) ([]models.FileInfo, e
 
 // SaveFile saves an uploaded file with atomic write and enforces file limits
 func (s *FileService) SaveFile(category, filename string, reader io.Reader) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	// NO GLOBAL LOCK during I/O!
+	// We only lock when swapping the file into the public directory.
 
 	baseDir := s.cfg.Storage.UploadDir
 	tempDir := filepath.Join(baseDir, s.cfg.Storage.TempDir)
@@ -160,19 +206,23 @@ func (s *FileService) SaveFile(category, filename string, reader io.Reader) erro
 	tempPath := tempFile.Name()
 	defer os.Remove(tempPath) // Cleanup on failure
 
-	// 2. Stream data to temp file
+	// 2. Stream data to temp file (HEAVY I/O - UNLOCKED)
 	if _, err := io.Copy(tempFile, reader); err != nil {
 		tempFile.Close()
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 	tempFile.Close()
 
-	// 3. Enforce file limit for category
+	// 3. ENTER CRITICAL SECTION
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// 4. Enforce file limit for category
 	if err := s.enforceFileLimit(category); err != nil {
 		return fmt.Errorf("failed to enforce file limit: %w", err)
 	}
 
-	// 4. Move to final destination
+	// 5. Move to final destination
 	finalPath := filepath.Join(finalDir, filename)
 	if err := os.Rename(tempPath, finalPath); err != nil {
 		// Cross-device fallback

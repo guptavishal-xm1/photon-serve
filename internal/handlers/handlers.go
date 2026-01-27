@@ -5,7 +5,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"rom-server/internal/config"
@@ -91,6 +93,21 @@ func (h *Handlers) Upload(w http.ResponseWriter, r *http.Request) {
 	// Limit body size
 	r.Body = http.MaxBytesReader(w, r.Body, h.cfg.GetMaxUploadSize())
 
+	// Validate category from Query Param (Fail Fast)
+	// We prefer query param for category to avoid parsing the whole body
+	// just to find out the category is invalid.
+	category := r.URL.Query().Get("category")
+	
+	// Fallback to FormValue if not in query (forces body read, but supports legacy clients)
+	if category == "" {
+		category = r.FormValue("category")
+	}
+
+	if !h.cfg.IsValidCategory(category) {
+		h.sendError(w, http.StatusBadRequest, "Invalid category (use ?category= param)")
+		return
+	}
+
 	// Parse multipart form with 32MB memory buffer
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		h.logger.Printf("Upload parse error: %v", err)
@@ -105,13 +122,6 @@ func (h *Handlers) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-
-	// Validate category
-	category := r.FormValue("category")
-	if !h.cfg.IsValidCategory(category) {
-		h.sendError(w, http.StatusBadRequest, "Invalid category")
-		return
-	}
 
 	// Sanitize filename
 	safeFilename := services.SanitizeFilename(handler.Filename)
@@ -191,6 +201,19 @@ func (h *Handlers) ServeDownload(baseDir string) http.Handler {
 		// Acquire download slot
 		h.fileService.AcquireDownloadSlot()
 		defer h.fileService.ReleaseDownloadSlot()
+
+		// Track download stats (Best effort, ignore errors)
+		// URL is /downloads/category/filename
+		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/downloads/"), "/")
+		if len(parts) >= 2 {
+			category := parts[0]
+			filename := parts[1]
+			// Handle potential URL encoding
+			if decoded, err := url.QueryUnescape(filename); err == nil {
+				filename = decoded
+			}
+			h.fileService.IncrementDownloadCount(category, filename)
+		}
 
 		// Add download-specific headers
 		w.Header().Set("Cache-Control", "public, max-age=3600")

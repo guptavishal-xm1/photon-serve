@@ -179,6 +179,25 @@ server {
 }
 ```
 
+## CLI Upload Guide (e.g., from Jenkins/CI)
+
+You can upload files directly using `curl` without using the web interface.
+
+**Command:**
+```bash
+curl --progress-bar -X POST \
+  -H "X-API-Key: YOUR_SECRET_KEY" \
+  -F "zipfile=@/path/to/rom.zip" \
+  "https://your-domain.com/upload?category=gapps" | cat
+```
+
+**Parameters:**
+- `X-API-Key`: Must match the api key configured on your server.
+- `category`: **Pass as URL query parameter** (?category=gapps) for faster validation.
+- `zipfile`: The local path to the file. **Important:** proper `@` prefix is required.
+
+**Note:** If using Cloudflare, ensure the DNS record is "Gray Clouded" (DNS Only) to bypass the 100MB upload limit, OR configure your server IP directly using `--resolve` if needed.
+
 ## Adding New Categories
 
 1. Edit `config.json`:

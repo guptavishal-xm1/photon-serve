@@ -27,10 +27,10 @@ func Auth(cfg *config.Config, logger *log.Logger) func(http.HandlerFunc) http.Ha
 
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			// Get key from header (preferred) or form value
+			// Get key from header (preferred) or query parameter (never read body)
 			userKey := r.Header.Get("X-API-Key")
 			if userKey == "" {
-				userKey = r.FormValue("key")
+				userKey = r.URL.Query().Get("key")
 			}
 
 			// Constant time comparison to prevent timing attacks
