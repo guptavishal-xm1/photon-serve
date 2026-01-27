@@ -22,6 +22,10 @@ type FileService struct {
 	mu             sync.RWMutex  // Mutex for file operations
 	downloadCounts map[string]int64
 	statsPath      string
+	
+	// Cache for file listing (reduces disk IO)
+	cachedFiles []models.FileInfo
+	cacheValid  bool
 }
 
 // NewFileService creates a new FileService with concurrency limits
@@ -120,10 +124,39 @@ func (s *FileService) InitializeStorage() error {
 
 // ListFiles returns all files from enabled categories
 func (s *FileService) ListFiles() ([]models.FileInfo, error) {
+	// 1. Try Fast Path (Read Lock)
 	s.mu.RLock()
-	defer s.mu.RUnlock()
+	if s.cacheValid {
+		// Clone cache and inject live counters
+		result := make([]models.FileInfo, len(s.cachedFiles))
+		copy(result, s.cachedFiles)
+		
+		for i := range result {
+			key := filepath.Join(result[i].Category, result[i].Filename)
+			result[i].Downloads = s.downloadCounts[key]
+		}
+		s.mu.RUnlock()
+		return result, nil
+	}
+	s.mu.RUnlock()
 
-	files := []models.FileInfo{} // Initialize as empty slice (not nil) for JSON []
+	// 2. Slow Path (Write Lock - Rebuild Cache)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Double-check (in case another goroutine beat us)
+	if s.cacheValid {
+		result := make([]models.FileInfo, len(s.cachedFiles))
+		copy(result, s.cachedFiles)
+		for i := range result {
+			key := filepath.Join(result[i].Category, result[i].Filename)
+			result[i].Downloads = s.downloadCounts[key]
+		}
+		return result, nil
+	}
+
+	// Rebuild Cache from Disk
+	var files []models.FileInfo
 	baseDir := s.cfg.Storage.UploadDir
 
 	for catName, cat := range s.cfg.Categories {
@@ -159,7 +192,7 @@ func (s *FileService) ListFiles() ([]models.FileInfo, error) {
 				Size:      formatSize(info.Size()),
 				SizeBytes: info.Size(),
 				UpdatedAt: info.ModTime().Format("2006-01-02 15:04"),
-				Downloads: s.downloadCounts[filepath.Join(catName, e.Name())],
+				// Downloads populated dynamically
 			})
 		}
 	}
@@ -169,12 +202,27 @@ func (s *FileService) ListFiles() ([]models.FileInfo, error) {
 		return files[i].UpdatedAt > files[j].UpdatedAt
 	})
 
-	return files, nil
+	// Update Cache
+	s.cachedFiles = files
+	s.cacheValid = true
+
+	// Return result with populated counts
+	result := make([]models.FileInfo, len(files))
+	copy(result, files)
+	for i := range result {
+		key := filepath.Join(result[i].Category, result[i].Filename)
+		result[i].Downloads = s.downloadCounts[key]
+	}
+
+	return result, nil
 }
 
 // ListFilesByCategory returns files for a specific category
 func (s *FileService) ListFilesByCategory(category string) ([]models.FileInfo, error) {
 	allFiles, err := s.ListFiles()
+	
+	// Invalidate Cache since we are adding a file
+	s.cacheValid = false
 	if err != nil {
 		return nil, err
 	}
@@ -293,6 +341,9 @@ func (s *FileService) enforceFileLimit(category string) error {
 func (s *FileService) DeleteFile(category, filename string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	
+	// Invalidate Cache
+	s.cacheValid = false
 
 	// Sanitize to prevent directory traversal
 	safeFilename := filepath.Base(filename)

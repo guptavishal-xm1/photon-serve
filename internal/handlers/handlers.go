@@ -43,6 +43,9 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 
 // GetConfig returns public configuration for frontend
 func (h *Handlers) GetConfig(w http.ResponseWriter, r *http.Request) {
+	// Cache config in browser for 5 minutes (it rarely changes)
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	
 	stats := h.fileService.GetCategoryStats()
 	
 	resp := models.ConfigResponse{
