@@ -215,15 +215,52 @@
 
     <!-- Footer -->
     <footer class="border-t border-white/10 bg-black py-8 mt-auto">
-      <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-        <p>&copy; <script>document.write(new Date().getFullYear())</script> <span id="footer-app-name">Project</span>. All rights reserved.</p>
-        <div class="flex gap-4">
-          <a href="#" class="hover:text-white transition-colors">Telegram</a>
-          <a href="#" class="hover:text-white transition-colors">GitHub</a>
-          <a href="#" class="hover:text-white transition-colors">Donate</a>
+      <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-gray-500">
+        <div class="flex gap-6">
+          <a href="https://t.me/shikihub" target="_blank" class="hover:text-accent-primary transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.21 2.79-.4.27-.76.4-1.08.39-.35-.01-1.03-.2-1.53-.35-.62-.19-1.12-.29-1.08-.61.02-.16.24-.32.65-.49 2.54-1.1 4.23-1.83 5.09-2.19 2.42-1.02 2.93-1.19 3.26-1.19.14 0 .47.03.68.21.18.15.22.35.24.57 0 .09.01.29 0 .4z"/></svg>
+            Telegram
+          </a>
+          <a href="https://github.com/guptavishal-xm1/photon-serve" target="_blank" class="hover:text-accent-primary transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+            GitHub
+          </a>
+          <button onclick="showDonate()" class="hover:text-accent-primary transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+            Donate
+          </button>
         </div>
       </div>
     </footer>
+  </div>
+
+  <!-- Donate Modal -->
+  <div id="donate-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-dark-700 border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="donate-panel">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+          <svg class="w-6 h-6 text-accent-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          Support Development
+        </h3>
+        <button onclick="closeDonate()" class="text-gray-400 hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      
+      <p class="text-gray-400 mb-6 text-sm">
+        Your support helps keep the servers running and development active.
+      </p>
+
+      <div class="bg-dark-800 rounded-xl p-4 border border-white/5 mb-6">
+        <label class="block text-xs uppercase tracking-wide text-gray-500 font-bold mb-2">UPI ID (India)</label>
+        <div class="flex items-center justify-between gap-3">
+          <code class="text-accent-secondary font-mono text-lg break-all">vishal.gupta.6@superyes</code>
+          <button onclick="copyToClipboard('vishal.gupta.6@superyes')" class="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white" title="Copy UPI ID">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+      <button onclick="closeDonate()" class="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors">
+        Close
+      </button>
+    </div>
   </div>
 
   <!-- Toast Notification -->
@@ -251,10 +288,40 @@
       emptyMsg: $('#empty-message'),
       tabs: $('#category-tabs'),
       toast: $('#toast'),
-      toastMsg: $('#toast-msg')
+      toastMsg: $('#toast-msg'),
+      donateModal: $('#donate-modal'),
+      donatePanel: $('#donate-panel')
     };
 
     // --- Core Logic ---
+
+    // 0. Donate Modal
+    window.showDonate = function() {
+      if(!els.donateModal) return;
+      els.donateModal.classList.remove('opacity-0', 'pointer-events-none');
+      els.donatePanel.classList.remove('scale-95');
+      els.donatePanel.classList.add('scale-100');
+    }
+
+    window.closeDonate = function() {
+      if(!els.donateModal) return;
+      els.donateModal.classList.add('opacity-0', 'pointer-events-none');
+      els.donatePanel.classList.remove('scale-100');
+      els.donatePanel.classList.add('scale-95');
+    }
+    
+    // Close modal on outside click
+    if(els.donateModal) {
+        els.donateModal.addEventListener('click', (e) => {
+            if (e.target === els.donateModal) closeDonate();
+        });
+    }
+
+    function copyToClipboard(text) {
+       navigator.clipboard.writeText(text).then(() => {
+         showToast("UPI ID Copied!");
+       }).catch(() => showToast("Failed to copy", true));
+    }
 
     // 1. Initial Load
     async function init() {
@@ -290,7 +357,6 @@
         $('#app-name').textContent = appConfig.app_name;
         $('#app-subtitle').textContent = appConfig.app_subtitle || 'Official Downloads';
         $('#device-name').textContent = appConfig.device_name;
-        $('#footer-app-name').textContent = appConfig.app_name;
         
         document.title = appConfig.app_title;
         
